@@ -1,0 +1,32 @@
+{#
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+SPDX-License-Identifier: MIT-0
+#}
+from pynamodb.models import Model
+from models.demo_model import *
+
+{% for table_name in tables %}
+class {{ table_name }}_CRUDOperations:
+    def __init__(self):
+        self.model = {{ table_name }}
+
+    def create_item(self, item_data):
+        item = self.model(**item_data)
+        item.save()
+        return item
+
+    def get_item(self, item_id):
+        return self.model.get(item_id).serialize()
+
+    def update_item(self, item_id, update_data):
+        item = self.model.get(item_id)
+        for key, value in update_data.items():
+            setattr(item, key, value)
+        item.save()
+        return item.serialize()
+
+    def delete_item(self, item_id):
+        item = self.model.get(item_id)
+        item.delete()
+
+{% endfor %}

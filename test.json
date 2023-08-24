@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Table1",
+    "region": "us-east-1",
+    "attributes": [
+      {
+        "name": "id",
+        "type": "UnicodeAttribute"
+      },
+      {
+        "name": "name",
+        "type": "UnicodeAttribute"
+      },
+      {
+        "name": "age",
+        "type": "NumberAttribute"
+      }
+    ]
+  },
+  {
+    "name": "Table2",
+    "region": "us-east-1",
+    "attributes": [
+      {
+        "name": "id",
+        "type": "UnicodeAttribute"
+      },
+      {
+        "name": "title",
+        "type": "UnicodeAttribute"
+      },
+      {
+        "name": "is_active",
+        "type": "BooleanAttribute"
+      }
+    ]
+  },
+  {
+    "name": "Table3",
+    "region": "us-east-1",
+    "attributes": []
+  },
+  {
+    "name": "Table4",
+    "region": "us-east-1"
+  }
+]

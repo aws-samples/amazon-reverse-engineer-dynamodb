@@ -1,0 +1,111 @@
+{#
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+SPDX-License-Identifier: MIT-0
+#}
+from pynamodb.models import Model
+from pynamodb.attributes import (
+    UnicodeAttribute, NumberAttribute, UnicodeSetAttribute, UTCDateTimeAttribute, BooleanAttribute
+)
+from pynamodb.indexes import GlobalSecondaryIndex, LocalSecondaryIndex, AllProjection, KeysOnlyProjection, IncludeProjection
+
+{%- set attribute_mapping = ({'S' : 'UnicodeAttribute', 'N': 'NumberAttribute', 'B': 'BooleanAttribute'}) -%}
+{%- set Index_Projection_Mapping = ({'ALL' : 'AllProjection()', 'KEYS_ONLY': 'KeysOnlyProjection()', 'INCLUDE': 'IncludeProjection'}) -%}
+{%- set key_mapping = ({'HASH' : 'hash_key', 'RANGE': 'range_key'}) -%}
+
+
+{%- for table_name, attributes in table_attributes.items() %}
+{%- set gsi_model_calls = [] -%}
+{%- set lsi_model_calls = [] -%}
+{%- set gsi_index_attributes = [] -%}
+{%- set lsi_index_attributes = [] -%}
+# GLOBAL SECONDARY INDEX
+{%- if attributes.get('GlobalSecondaryIndexes') -%}
+{%- for gsi in attributes.get('GlobalSecondaryIndexes') -%}
+{{ gsi_model_calls.append(gsi['IndexName'].replace('-','_')) or ""}}
+
+class {{gsi['IndexName'].replace('-','_')}}(GlobalSecondaryIndex):
+    class Meta:
+        # index_name is optional, but can be provided to override the default name
+        index_name = '{{gsi['IndexName']}}'
+        read_capacity_units = {{gsi['ProvisionedThroughput'].get('ReadCapacityUnits')}}
+        write_capacity_units = {{gsi['ProvisionedThroughput'].get('WriteCapacityUnits')}}
+        # All attributes are projected
+        projection = {{Index_Projection_Mapping.get(gsi['Projection'].get('ProjectionType'))}}
+
+    # This attribute is the hash key for the index
+    # Note that this attribute must also exist
+    # in the model
+    {% for data in gsi.get('KeySchema') -%}
+    {{data.get('AttributeName')}} = {{ attribute_mapping.get(data.get('AttributeType')) }}{% if data.get('KeyType')%}({{ key_mapping.get(data.get('KeyType'))}}=True){% endif %}
+    {% set temp = data.get('AttributeName') + " = " + attribute_mapping.get(data.get('AttributeType')) + "()" -%}
+    {%- if temp not in gsi_index_attributes %}{{gsi_index_attributes.append(temp) or ""}} {%- endif %}
+    {%- endfor -%}
+
+{%- endfor -%}
+
+{%- endif %}
+
+# LOCAL SECONDARY INDEX
+
+{%- if attributes.get('LocalSecondaryIndexes') -%}
+{%- for lsi in attributes.get('LocalSecondaryIndexes') %}
+{{ lsi_model_calls.append(lsi['IndexName'].replace('-','_')) or ""}}
+
+class {{lsi['IndexName'].replace('-','_')}}(LocalSecondaryIndex):
+    class Meta:
+        # index_name is optional, but can be provided to override the default name
+        index_name = '{{lsi['IndexName']}}'
+        # All attributes are projected
+        projection = {{Index_Projection_Mapping.get(lsi['Projection'].get('ProjectionType'))}}{% if lsi['Projection'].get('ProjectionType') == 'INCLUDE'%}({{lsi['Projection'].get('NonKeyAttributes')}}){% endif %}
+
+    # This attribute is the hash key for the index
+    # Note that this attribute must also exist
+    # in the model
+    {% for data in lsi.get('KeySchema') -%}
+    {{data.get('AttributeName')}} = {{ attribute_mapping.get(data.get('AttributeType')) }}{% if data.get('KeyType')%}({{ key_mapping.get(data.get('KeyType'))}}=True){% endif %}
+    {% set temp = data.get('AttributeName') + " = " + attribute_mapping.get(data.get('AttributeType')) + "()" -%}
+    {%- if temp not in lsi_index_attributes %}{{lsi_index_attributes.append(temp) or ""}} {%- endif %}
+    {%- endfor -%}
+
+{% endfor %}
+
+{%- endif %}
+
+
+class {{table_name}}(Model):
+    {% for data in attributes.get('KeySchema') %}
+    {{data.get('AttributeName')}} = {{ attribute_mapping.get(data.get('AttributeType')) }}{%- if data.get('KeyType') -%}({{ key_mapping.get(data.get('KeyType'))}}=True){%- endif -%}
+    {%- set temp = data.get('AttributeName') +" = "+ attribute_mapping.get(data.get('AttributeType'))+"()" -%}
+    {%- if temp in  gsi_index_attributes -%}
+    {{ gsi_index_attributes.remove(temp) or "" }}
+    {% endif -%}
+    {%- if temp in  lsi_index_attributes -%}
+    {{ lsi_index_attributes.remove(temp) or "" }}
+    {%- endif -%}
+    {% endfor -%}
+    {%- for gsi_index_attribute in gsi_index_attributes %}
+    {{gsi_index_attribute}}
+    {%- endfor %}
+    {%- for lsi_index_attribute in lsi_index_attributes %}
+    {{lsi_index_attribute}}
+    {%- endfor %}
+    {% for attribute_name, attribute_type in attributes.get('UserAttributes').items() %}
+    {{attribute_name}} = {{attribute_type}}()
+    {%- endfor %}
+
+    class Meta:
+        table_name = '{{table_name}}'
+        region = '{{attributes.get("Region")}}'
+
+    {% for gsi_model_call in gsi_model_calls -%}
+    gsi_{{loop.index}} = {{gsi_model_call}}()
+    {% endfor %}
+    {% for lsi_model_call in lsi_model_calls -%}
+    lsi_{{loop.index}} = {{lsi_model_call}}()
+    {% endfor %}
+    @staticmethod
+    def setup_model(model, table_name):
+        model.Meta.table_name = table_name
+
+
+{% endfor %}
