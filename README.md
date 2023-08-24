@@ -24,6 +24,8 @@ The key features are:
 
 # Architecture
 ## Target technology stack
+
+
 1. #### Python: 
    Python is a high-level, general-purpose programming language. Its design philosophy emphasizes code readability with the use of significant indentation. Python is dynamically-typed and garbage-collected.
 
@@ -34,6 +36,8 @@ The key features are:
     Amazon DynamoDB is a fully managed, serverless, key-value NoSQL database designed to run high-performance applications at any scale. DynamoDB offers built-in security, continuous backups, automated multi-Region replication, in-memory caching, and data import and export tools.
 
 # Target architecture flow
+
+![plot](architecture_flow.png)
 
 
 1. User creates input JSON schema file. This JSON schema represents the attributes of the respective DynamoDB tables from which you want to create Models and CRUD functions for. It contains three important keys namely:
