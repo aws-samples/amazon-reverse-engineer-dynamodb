@@ -79,6 +79,20 @@ Application uses Jinja template engine to generate PynamoDB ORM models and corre
 
    Navigate to the application parent directory ```reverse_engineer_dynamo``` and run ```pip install -r requirements.txt``` to install the required libraries and packages
 
+The application requires the below IAM Policy at minimal to run:
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": "dynamodb:DescribeTable",
+            "Resource": "*"
+        }
+    ]
+}
+```
 
 ### Generate Models and CRUD functions
 1. Navigate to the parent directory : reverse_engineer_dynamo
